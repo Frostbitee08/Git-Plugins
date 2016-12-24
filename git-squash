@@ -1,0 +1,92 @@
+#!/bin/sh
+
+version() {
+  echo "Rocco Del Priore's git squash v0.1.0"
+}
+
+usage() {
+  echo "usage: git squash <commit> [-l | --last] [-v | --version] [-m | --message]"
+  echo 
+  echo "     -l, --last: Option to squash back to the number of commits instad of the hash. Followed by an integer."
+  echo "     -m, --message: Set custom commit message. Overrides edit, and sets --no-verify"
+  echo "     -v, --version: View the current version number."
+}
+
+last() {
+  #Ensure arguements were included
+  if [ "$#" -lt 1 ]; then
+    usage; exit 1
+  fi
+
+  #Reset to our desired commit
+  local numberOfCommits="$2"
+  git reset --soft HEAD~${_TMP=$numberOfCommits}
+
+  #Set commit message
+  local commitMessage="$(git log --format=%B --reverse HEAD..HEAD@{$numberOfCommits})"
+
+  #Check for options
+  local arguement="$3"
+  local verify=true
+  case $arguement in 
+    "-m" | "--message")
+      commitMessage="\"$4\""
+      verify=false
+      ;;
+  esac
+
+  #Make commit
+  if $verify; then
+    git commit --edit -m $commitMessage
+  else
+    local test="git commit --no-verify -m $commitMessage"
+    eval $test
+  fi
+}
+
+main () {
+  #Ensure arguements were included
+  if [ "$#" -lt 1 ]; then
+    usage; exit 1
+  fi
+
+  #Check for options
+  local arguement="$1"
+  case $arguement in 
+    "-h" | "--help")
+      usage; exit 0;
+      ;;
+    "-v" | "--version")
+      version; exit 0;
+      ;;
+    "-l" | "--last")
+      last "$@"; exit 0;
+  esac
+
+  #Set commit message
+  local commitMessage="\"$(git log --format=%B --reverse $arguement..HEAD)"\"
+
+  #Reset to our desired commit
+  git reset --soft $arguement
+
+  #Check for options
+  local secondArguement="$2"
+  local verify=true
+  case $secondArguement in 
+    "-m" | "--message")
+      commitMessage="\"$3\""
+      verify=false
+      ;;
+  esac
+
+  #Make commit
+  if $verify; then
+    local cmd="git commit --edit -m $commitMessage"
+    eval $cmd
+  else
+    local cmd="git commit --no-verify -m $commitMessage"
+    eval $cmd
+  fi
+}
+
+main "$@"
